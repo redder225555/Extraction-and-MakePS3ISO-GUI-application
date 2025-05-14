@@ -55,11 +55,11 @@ Configurable: All settings and layouts are saved for next time.
 
 # Installation & Build
 
-run `pip install pyinstaller` if you don't have it already.
+Run `pip install pyinstaller` if you don't have it already.
 
 Download the repository then `cd` to the folder with `Main.py`.
 
-Run the command below in the location of the repo files you downloaded to build it, or go to the releases page to download the last built version of this program:
+Run the command below in the location of the repo files you downloaded to build it, or go to the [releases page](https://github.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/releases) to download the last built version of this program:
 
 ```
 pyinstaller --noconfirm --onefile --add-data "license.txt;." Main.py
@@ -127,3 +127,28 @@ Next, you’ll see the requirements window with links to download needed tools.
 | Start Conversion                 | Start ISO creation                                                      |
 | Execute Batch File               | Run batch file to delete converted folders                              |
 | Open AppData Folder              | Open the folder where logs/configs are stored                           |
+
+# Configuration & Layout Files
+
+- **Extraction Software settings:**  
+  `%LOCALAPPDATA%\ExtractionSoftware\config.json`
+- **Extraction Software layout:**  
+  `%LOCALAPPDATA%\ExtractionSoftware\layout.json`
+- **MakePS3ISO settings:**  
+  `%LOCALAPPDATA%\MakePS3ISO\config.json`
+- **MakePS3ISO logs:**  
+  `%LOCALAPPDATA%\MakePS3ISO\converted_folders.log`
+- **MakePS3ISO batch file:**  
+  `%LOCALAPPDATA%\MakePS3ISO\delete_folders.bat`
+
+# License
+
+This project is licensed under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html) to ensure it remains free and open source for all users.
+
+# Support
+
+If you have issues or suggestions, please open an [issue](https://github.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/issues) on GitHub.
+
+---
+
+**Enjoy batch extracting and PS3 ISO making!**
