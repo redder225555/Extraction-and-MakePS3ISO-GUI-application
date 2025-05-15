@@ -111,15 +111,21 @@ notebook = ttk.Notebook(root)
 # Import the ExtractionSoftware and MakePS3ISO modules
 import ExtractionSoftware
 import MakePS3ISO
-
+import ExtractPS3ISO
+import SplitPS3ISO
+import PatchPS3ISO
 # Create frames for each tab
 extraction_frame = ExtractionSoftware.create_frame(notebook)
 makeps3iso_frame = MakePS3ISO.create_frame(notebook)
-
+ExtractPS3ISO_frame = PS3Extract.create_frame(notebook)
+SplitPS3ISO_frame = SplitPS3ISO.create_frame(notebook)
+PatchPS3ISO_fram = PatchPS3ISO.create_frame(notebook)
 # Add tabs to the notebook
-notebook.add(extraction_frame, text="Extraction Software")
-notebook.add(makeps3iso_frame, text="Make PS3 ISO")
-
+notebook.add(extraction_frame, text="Extraction Software GUI")
+notebook.add(makeps3iso_frame, text="Make PS3 ISO GUI")
+notebook.add(PS3Extract_frame, text="Extract PS3 ISO GUI")
+notebook.add(SplitPS3ISO_frame, text="Split PS3 ISO GUI")
+noteboot.add(PatchPS3ISO_fram, text="Patch PS3 ISO GUI")
 # Pack the notebook into the main window
 notebook.pack(fill=tk.BOTH, expand=True)
 
