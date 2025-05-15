@@ -114,14 +114,17 @@ import MakePS3ISO
 import ExtractPS3ISO
 import SplitPS3ISO
 import PatchPS3ISO
+import PKGFileMover
 # Create frames for each tab
 extraction_frame = ExtractionSoftware.create_frame(notebook)
 makeps3iso_frame = MakePS3ISO.create_frame(notebook)
 ExtractPS3ISO_frame = PS3Extract.create_frame(notebook)
 SplitPS3ISO_frame = SplitPS3ISO.create_frame(notebook)
-PatchPS3ISO_fram = PatchPS3ISO.create_frame(notebook)
+PatchPS3ISO_frame = PatchPS3ISO.create_frame(notebook)
+PKGFileMover_frame = PKGFileMover.create_frame(notebook)
 # Add tabs to the notebook
 notebook.add(extraction_frame, text="Extraction Software GUI")
+notebook.add(PKGFileMover_frame, text="Move PKG GUI")
 notebook.add(makeps3iso_frame, text="Make PS3 ISO GUI")
 notebook.add(PS3Extract_frame, text="Extract PS3 ISO GUI")
 notebook.add(SplitPS3ISO_frame, text="Split PS3 ISO GUI")
