@@ -9,10 +9,10 @@ import json
 from pathlib import Path
 from tkinter import ttk
 
-APPDATA_DIR = Path(os.getenv("LOCALAPPDATA")) / "ExtractionSoftware"
-LOG_FILE = APPDATA_DIR / "log.txt"
-CONFIG_FILE_JSON = APPDATA_DIR / "config.json"
-LAYOUT_FILE = APPDATA_DIR / "layout.json"
+APPDATA_DIR = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
+LOG_FILE = APPDATA_DIR / "ES__log.txt"
+CONFIG_FILE_JSON = APPDATA_DIR / "ES_config.json"
+LAYOUT_FILE = APPDATA_DIR / "ES_layout.json"
 APPDATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_LAYOUT = {
