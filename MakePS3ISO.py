@@ -20,15 +20,15 @@ converted_folders = []  # List to store successfully converted folders
 failed_folders = set()  # Set to store folders that failed conversion
 
 # Paths for AppData storage
-appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "MakePS3ISO")
-config_file_path = os.path.join(appdata_folder, "config.json")
+appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
+config_file_path = os.path.join(appdata_folder, "MPS3ISOconfig.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_conversions.json")
 log_file_path = os.path.join(appdata_folder, "converted_folders.log")
 batch_file_path = os.path.join(appdata_folder, "delete_folders.bat")
 
 # Default path values
-default_makeps3iso_path = r"J:\PS3 keys\makeps3iso\makeps3iso.exe"
-default_output_folder = r"J:\ps3iso"
+default_makeps3iso_path = ""
+default_output_folder = ""
 default_pkg_destination_folder = ""
 
 # -------------------------

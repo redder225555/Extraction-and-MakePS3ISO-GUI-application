@@ -13,7 +13,5 @@ from tkinter import ttk
 
 # Paths for AppData storage
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
-config_file_path = os.path.join(appdata_folder, "ISO-E-config.json")
-failed_conversions_file_path = os.path.join(appdata_folder, "failed_split.json")
-log_file_path = os.path.join(appdata_folder, "Split_ISOs.log")
-batch_file_path = os.path.join(appdata_folder, "delete_Main_ISO.bat")
+config_file_path = os.path.join(appdata_folder, "PKGMover.json")
+log_file_path = os.path.join(appdata_folder, "Moved_PKGs.log")
