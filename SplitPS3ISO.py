@@ -10,6 +10,7 @@ current_proc = None
 split_isos = []
 failed_isos = set()
 
+
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "SplitISO_config.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_split.json")
@@ -17,6 +18,20 @@ log_file_path = os.path.join(appdata_folder, "Split_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Main_ISO.bat")
 
 default_splitps3iso_path = ""
+
+def download_file(url, filename):
+        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/extractps3iso.dll"
+        filename = "splitps3iso.dll"
+    
+    # Create the downloads directory if it doesn't exist
+        os.makedirs(appdata_folder, exist_ok=True)
+    
+    # Join the directory and filename to create the full path
+        filepath = os.path.join(appdata_folder, filename)
+    
+    # Download the file
+        urllib.request.urlretrieve(url, filepath)
+        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):

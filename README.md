@@ -6,11 +6,11 @@
 ## 7-Zip [Download](https://www.7-zip.org/download.html)
 ## WinRAR [Download](https://www.win-rar.com/start.html?&L=0)
 
-# makeps3iso.exe (required for PS3 ISO creation)
-## makeps3iso.exe [Release](https://github.com/bucanero/ps3iso-utils/releases/tag/277db7de)
+# the custom dll's in this repository in needed for all of the functionallity of program (32bit)
+## I was only able to get the dll's to compile as 32 bit versions so python app needs to be ran 32 bit and built 32 bit for it to work
 
-# Python 3.8+ (for running from source)
-## pip (Python package manager)
+# Python 3.8+ 32bit (for running from source)
+## pip 32 bit(Python package manager)
 
 # What is this?
 ## Archive Batch Extractor & PS3 ISO Maker is a Windows GUI tool for:

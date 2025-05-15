@@ -24,6 +24,20 @@ batch_file_path = os.path.join(appdata_folder, "delete_Patched_ISO.bat")
 default_patchps3iso_path = ""
 default_version = ""
 
+def download_file(url, filename):
+        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/patchps3iso.dll"
+        filename = "patchps3iso.dll"
+    
+    # Create the downloads directory if it doesn't exist
+        os.makedirs(appdata_folder, exist_ok=True)
+    
+    # Join the directory and filename to create the full path
+        filepath = os.path.join(appdata_folder, filename)
+    
+    # Download the file
+        urllib.request.urlretrieve(url, filepath)
+        print(f"Downloaded {url} to {filepath}")
+
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
         os.makedirs(appdata_folder, exist_ok=True)

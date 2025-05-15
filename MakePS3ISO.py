@@ -13,9 +13,6 @@ current_proc = None
 converted_folders = []  # List to store successfully converted folders
 failed_folders = set()  # Set to store folders that failed conversion
 
-dll = ctypes.CDLL(r"G:\Main\makeps3iso2.dll")
-print("DLL loaded!")
-
 # Paths for AppData storage
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "MPS3ISOconfig.json")
@@ -26,6 +23,20 @@ batch_file_path = os.path.join(appdata_folder, "delete_folders.bat")
 # Default path values
 default_makeps3iso_path = ""
 default_output_folder = ""
+
+def download_file(url, filename):
+        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/makeps3iso.dll"
+        filename = "makeps3iso.dll"
+    
+    # Create the downloads directory if it doesn't exist
+        os.makedirs(appdata_folder, exist_ok=True)
+    
+    # Join the directory and filename to create the full path
+        filepath = os.path.join(appdata_folder, filename)
+    
+    # Download the file
+        urllib.request.urlretrieve(url, filepath)
+        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
@@ -139,21 +150,6 @@ def run_conversion_external(folder, exe_entry, output_entry, split_var, unattend
         log_text.insert(tk.END, "Output folder not set.\n")
         return False
 
-    # Use absolute path for DLL
-    dll_path = os.path.abspath(dll_path)
-    if not os.path.isfile(dll_path):
-        log_text.insert(tk.END, f"MakePS3ISO DLL not found at: {dll_path}\n")
-        return False
-
-    try:
-        dll = ctypes.CDLL(dll_path)
-        # Set argument and return types for safety
-        try:
-            dll.makeps3iso_entry.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_char_p)]
-            dll.makeps3iso_entry.restype = ctypes.c_int
-        except AttributeError:
-            log_text.insert(tk.END, "DLL entry point 'makeps3iso_entry' not found.\n")
-            return False
 
         # Build argument list for DLL
         args = [b"makeps3iso2.dll"]
@@ -176,9 +172,6 @@ def run_conversion_external(folder, exe_entry, output_entry, split_var, unattend
         else:
             log_text.insert(tk.END, f"Failed: {target_folder} (DLL returned {result})\n")
             return False
-    except Exception as e:
-        log_text.insert(tk.END, f"Exception: {e}\n")
-        return False
 
 def start_conversion_thread(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button):
     threading.Thread(target=process_folders, args=(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button), daemon=True).start()

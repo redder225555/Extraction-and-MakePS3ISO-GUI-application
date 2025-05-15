@@ -64,8 +64,9 @@ def show_requirements(parent):
 
     req_text = (
         "Requirements:\n"
+        "Note this is only for 32Bit Version of Python\n"
         "- 7-Zip or WinRAR must be installed and their executable paths provided in the app.\n"
-        "- makeps3iso.exe is required for PS3 ISO creation.\n\n"
+        "- my custom built makeps3iso.dll is required for PS3 ISO creation.\n\n"
         "Download links:"
     )
     label = tk.Label(req_win, text=req_text, justify="left", anchor="w")
@@ -81,7 +82,7 @@ def show_requirements(parent):
     link_frame.pack(pady=(5,0))
 
     links = [
-        ("makeps3iso.exe Release", "https://github.com/bucanero/ps3iso-utils/releases"),
+        ("makeps3iso.dll file Download", "https://github.com/redder225555/Extraction-and-MakePS3ISO-GUI-application"),
         ("7-Zip Website", "https://www.7-zip.org/"),
         ("WinRAR Website", "https://www.win-rar.com/download.html"),
     ]

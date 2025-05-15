@@ -4,6 +4,7 @@ from tkinter import ttk
 import os
 import threading
 import ctypes
+import urllib.request
 
 # -------------------------
 # Global Variables and Configuration
@@ -13,16 +14,31 @@ current_proc = None
 extracted_isos = []  # List to store successfully extracted ISOs
 failed_isos = set()  # Set to store ISOs that failed extraction
 
+
 # Paths for AppData storage
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "ISO-E-config.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_Extractions.json")
 log_file_path = os.path.join(appdata_folder, "Extracted_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Extracted_ISO.bat")
-
+extractps3iso_dll_path = os.path.join(appdata_folder, dll_host_file)
 # Default path values
 default_extractps3iso_path = ""
 default_output_folder = ""
+
+def download_file(url, filename):
+        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/extractps3iso.dll"
+        filename = "extractps3iso.dll"
+    
+    # Create the downloads directory if it doesn't exist
+        os.makedirs(appdata_folder, exist_ok=True)
+    
+    # Join the directory and filename to create the full path
+        filepath = os.path.join(appdata_folder, filename)
+    
+    # Download the file
+        urllib.request.urlretrieve(url, filepath)
+        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
