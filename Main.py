@@ -11,28 +11,6 @@ print(platform.architecture())
 
 import sys
 
-if sys.platform.startswith('win'):
-    # Windows-specific import
-    try:
-        import msvcrt
-        print("Running on Windows")
-        import WEAdmin
-    except ImportError:
-        print("msvcrt is not available on this system")
-
-elif sys.platform.startswith('linux'):
-    # Linux-specific import
-    try:
-        import termios, tty
-        print("Running on Linux")
-        import LAdmin
-    except ImportError:
-         print("termios or tty are not available on this system")
-
-else:
-    print("Operating system not recognized")
-
-
 
 def show_license_and_requirements():
     # Use a temporary root for dialogs
@@ -122,7 +100,7 @@ def show_requirements(parent):
     tk.Button(req_win, text="Continue", command=on_continue).pack(pady=10)
     req_win.protocol("WM_DELETE_WINDOW", sys.exit)
     req_win.wait_window()  # Wait until closed
-
+    
 # Check if the script is running with administrator privileges
 def is_admin():
     """Check if the script is running with administrator privileges."""
@@ -136,7 +114,7 @@ try:
         script_path = sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__)
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script_path}"', None, 1)
         sys.exit()
-
+        
     # Show license and requirements before launching main app
     show_license_and_requirements()
 
@@ -172,6 +150,7 @@ try:
     notebook.pack(fill=tk.BOTH, expand=True)
 
     root.mainloop()
+
 except Exception as e:
     print("Exception occurred in main program:", file=sys.stderr)
     traceback.print_exc()
@@ -183,3 +162,4 @@ except Exception as e:
 
 # Start the main event loop
 root.mainloop()
+
