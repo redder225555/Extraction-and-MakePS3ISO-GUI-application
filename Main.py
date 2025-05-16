@@ -14,16 +14,18 @@ import sys
 if sys.platform.startswith('win'):
     # Windows-specific import
     try:
-        import msvcrt, WEAdmin
+        import msvcrt
         print("Running on Windows")
+        import WEAdmin
     except ImportError:
         print("msvcrt is not available on this system")
 
 elif sys.platform.startswith('linux'):
     # Linux-specific import
     try:
-        import termios, tty, LAdmin
+        import termios, tty
         print("Running on Linux")
+        import LAdmin
     except ImportError:
          print("termios or tty are not available on this system")
 
