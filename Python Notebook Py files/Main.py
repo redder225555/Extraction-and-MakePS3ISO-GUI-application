@@ -13,12 +13,48 @@ APPDATA_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ps3utils")
 DLLS_PATH = os.path.join(APPDATA_PATH, "DLLs")
 LICENSE_FLAG = os.path.join(APPDATA_PATH, "license_accepted.txt")
 
-DLL_URLS = {
-    "extractps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/extractps3iso.dll",
-    "makeps3iso2.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/makeps3iso2.dll",
-    "splitps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/splitps3iso.dll",
-    "patchps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/patchps3iso.dll",
-}
+def show_architecture():
+    arch = platform.architecture()[0]
+    messagebox.showinfo("Architecture Info", f"Running as {arch} Python")
+
+def get_dll_urls():
+    arch = platform.architecture()[0]
+    if "64" in arch:
+        return {
+            "extractps3isox64.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/extractps3isox64.dll",
+            "makeps3isox64.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/makeps3isox64.dll",
+            "splitps3isox64.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/splitps3isox64.dll",
+            "patchps3isox64.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/patchps3isox64.dll",
+        }
+    else:
+        return {
+            "extractps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/extractps3iso.dll",
+            "makeps3iso2.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/makeps3iso2.dll",
+            "splitps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/splitps3iso.dll",
+            "patchps3iso.dll": "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/main/DLL%20Files/patchps3iso.dll",
+        }
+
+DLL_URLS = get_dll_urls()
+
+# Add this after DLL_URLS = get_dll_urls()
+def get_dll_name_map():
+    arch = platform.architecture()[0]
+    if "64" in arch:
+        return {
+            "extractps3iso": "extractps3isox64.dll",
+            "makeps3iso": "makeps3isox64.dll",
+            "splitps3iso": "splitps3isox64.dll",
+            "patchps3iso": "patchps3isox64.dll",
+        }
+    else:
+        return {
+            "extractps3iso": "extractps3iso.dll",
+            "makeps3iso": "makeps3iso2.dll",
+            "splitps3iso": "splitps3iso.dll",
+            "patchps3iso": "patchps3iso.dll",
+        }
+
+DLL_NAME_MAP = get_dll_name_map()
 
 def ensure_appdata_dirs():
     os.makedirs(DLLS_PATH, exist_ok=True)
@@ -133,10 +169,10 @@ try:
     import PatchPS3ISO
     import PKGFileMover
     extraction_frame = ExtractionSoftware.create_frame(notebook)
-    makeps3iso_frame = MakePS3ISO.create_frame(notebook)
-    ExtractPS3ISO_frame = ExtractPS3ISO.create_frame(notebook)
-    SplitPS3ISO_frame = SplitPS3ISO.create_frame(notebook)
-    PatchPS3ISO_frame = PatchPS3ISO.create_frame(notebook)
+    makeps3iso_frame = MakePS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["makeps3iso"]))
+    ExtractPS3ISO_frame = ExtractPS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["extractps3iso"]))
+    SplitPS3ISO_frame = SplitPS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["splitps3iso"]))
+    PatchPS3ISO_frame = PatchPS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["patchps3iso"]))
     PKGFileMover_frame = PKGFileMover.create_frame(notebook)
     notebook.add(extraction_frame, text="Extraction Software GUI")
     notebook.add(PKGFileMover_frame, text="Move PKG GUI")

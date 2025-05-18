@@ -8,11 +8,9 @@ import ctypes
 abort_flag = False
 current_proc = None
 split_isos = []
-failed_isos = set()
 
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "SplitISO_config.json")
-failed_conversions_file_path = os.path.join(appdata_folder, "failed_split.json")
 log_file_path = os.path.join(appdata_folder, "Split_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Main_ISO.bat")
 DLLS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "PS3Utils", "DLLs")
@@ -37,25 +35,14 @@ def load_config():
             config = json.load(config_file)
             default_splitps3iso_path = config.get("splitps3iso_path", "")
 
-def save_config(exe_entry):
+def save_config(output_entry):
     import json
     config = {
-        "splitps3iso_path": exe_entry.get().strip(),
+        "splitps3iso_path": default_splitps3iso_path,
+        "output_folder": output_entry.get().strip(),
     }
     with open(config_file_path, "w") as config_file:
         json.dump(config, config_file)
-
-def load_failed_splits():
-    global failed_isos
-    if os.path.exists(failed_conversions_file_path):
-        import json
-        with open(failed_conversions_file_path, "r") as failed_file:
-            failed_isos = set(json.load(failed_file))
-
-def save_failed_splits():
-    import json
-    with open(failed_conversions_file_path, "w") as failed_file:
-        json.dump(list(failed_isos), failed_file)
 
 def save_completed_log(split_isos, log_text):
     with open(log_file_path, "w") as log_file:
@@ -68,29 +55,26 @@ def create_batch_file(split_isos, log_text):
         for iso in split_isos:
             batch_file.write(f'del "{iso}"\n')
     log_text.insert(tk.END, f"Batch file created at: {batch_file_path}\n")
-    
-def select_exe(exe_entry):
-    filename = filedialog.askopenfilename(
-        title="Select splitps3iso DLL",
-        filetypes=[("DLL Files", "*.dll")]
-    )
-    if filename:
-        exe_entry.delete(0, tk.END)
-        exe_entry.insert(0, filename)
-        save_config(exe_entry)
 
-def add_iso(iso_queue_listbox, failed_isos):
+def select_output_folder(output_entry):
+    folder = filedialog.askdirectory(title="Select Output Folder for Split Files")
+    if folder:
+        output_entry.delete(0, tk.END)
+        output_entry.insert(0, folder)
+        save_config(output_entry)
+
+def add_iso(iso_queue_listbox, _):
     filename = filedialog.askopenfilename(
         title="Select PS3 ISO File",
         filetypes=[("PS3 ISO Files", "*.iso")]
     )
-    if filename and filename not in failed_isos:
+    if filename:
         if os.path.getsize(filename) > 4 * 1024 * 1024 * 1024:
             iso_queue_listbox.insert(tk.END, filename)
         else:
             messagebox.showinfo("File Too Small", "Selected ISO is not larger than 4GB (FAT32 limit).")
 
-def scan_base_folder(iso_queue_listbox, failed_isos):
+def scan_base_folder(iso_queue_listbox, _):
     base_folder = filedialog.askdirectory(title="Select Base Folder to Scan for ISOs")
     if not base_folder:
         return
@@ -99,7 +83,7 @@ def scan_base_folder(iso_queue_listbox, failed_isos):
         for f in files:
             if f.lower().endswith(".iso"):
                 iso_path = os.path.join(root_path, f)
-                if iso_path not in failed_isos and os.path.getsize(iso_path) > 4 * 1024 * 1024 * 1024:
+                if os.path.getsize(iso_path) > 4 * 1024 * 1024 * 1024:
                     matched_isos.add(iso_path)
     if matched_isos:
         for iso in matched_isos:
@@ -113,30 +97,44 @@ def remove_selected(iso_queue_listbox):
         for i in reversed(selection):
             iso_queue_listbox.delete(i)
 
-def run_split_external(iso_path, dll_entry, log_text, status_var, unattended_var):
+def run_split_external(iso_path, output_folder, log_text, status_var, unattended_var):
     status_var.set(f"Splitting: {iso_path}")
     log_text.insert(tk.END, f"Splitting ISO: {iso_path}\n")
 
-    dll_path = dll_entry.get().strip()
+    dll_path = default_splitps3iso_path
     if not dll_path:
         log_text.insert(tk.END, "splitps3iso DLL path not set.\n")
         return False
 
     try:
         dll = ctypes.CDLL(dll_path)
-        # Prepare arguments for main(int argc, char** argv)
         if unattended_var.get():
-            argc = 3
-            argv = (ctypes.c_char_p * 4)()
-            argv[0] = dll_path.encode("utf-8")
-            argv[1] = iso_path.encode("utf-8")
-            argv[2] = b"-h"
+            if output_folder.get().strip():
+                argc = 4
+                argv = (ctypes.c_char_p * 5)()
+                argv[0] = dll_path.encode("utf-8")
+                argv[1] = iso_path.encode("utf-8")
+                argv[2] = output_folder.get().strip().encode("utf-8")
+                argv[3] = b"-h"
+            else:
+                argc = 3
+                argv = (ctypes.c_char_p * 4)()
+                argv[0] = dll_path.encode("utf-8")
+                argv[1] = iso_path.encode("utf-8")
+                argv[2] = b"-h"
         else:
-            argc = 2
-            argv = (ctypes.c_char_p * 3)()
-            argv[0] = dll_path.encode("utf-8")
-            argv[1] = iso_path.encode("utf-8")
-        result = dll.main(argc, argv)
+            if output_folder.get().strip():
+                argc = 3
+                argv = (ctypes.c_char_p * 4)()
+                argv[0] = dll_path.encode("utf-8")
+                argv[1] = iso_path.encode("utf-8")
+                argv[2] = output_folder.get().strip().encode("utf-8")
+            else:
+                argc = 2
+                argv = (ctypes.c_char_p * 3)()
+                argv[0] = dll_path.encode("utf-8")
+                argv[1] = iso_path.encode("utf-8")
+        result = dll.splitps3iso_entry(argc, argv)
         if result == 0:
             log_text.insert(tk.END, f"Success: {iso_path}\n")
             return True
@@ -147,8 +145,8 @@ def run_split_external(iso_path, dll_entry, log_text, status_var, unattended_var
         log_text.insert(tk.END, f"Exception: {e}\n")
         return False
 
-def start_split_thread(iso_queue_listbox, dll_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
-    threading.Thread(target=process_isos, args=(iso_queue_listbox, dll_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var), daemon=True).start()
+def start_split_thread(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
+    threading.Thread(target=process_isos, args=(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var), daemon=True).start()
 
 def abort_split(status_var):
     global abort_flag
@@ -161,13 +159,13 @@ def execute_batch_file(log_text):
     else:
         log_text.insert(tk.END, "Batch file does not exist.\n")
 
-def process_isos(iso_queue_listbox, dll_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
+def process_isos(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
     isos = iso_queue_listbox.get(0, tk.END)
     if not isos:
         log_text.insert(tk.END, "No ISOs in queue.\n")
         return
 
-    global abort_flag, split_isos, failed_isos
+    global abort_flag, split_isos
     abort_flag = False
     split_isos = []
 
@@ -181,11 +179,9 @@ def process_isos(iso_queue_listbox, dll_entry, log_text, status_var, add_button,
         if abort_flag:
             log_text.insert(tk.END, "Aborted by user.\n")
             break
-        success = run_split_external(iso, dll_entry, log_text, status_var, unattended_var)
+        success = run_split_external(iso, output_entry, log_text, status_var, unattended_var)
         if success:
             split_isos.append(iso)
-        else:
-            failed_isos.add(iso)
 
     iso_queue_listbox.delete(0, tk.END)
     if not abort_flag:
@@ -193,31 +189,29 @@ def process_isos(iso_queue_listbox, dll_entry, log_text, status_var, add_button,
     else:
         log_text.insert(tk.END, "Splitting aborted.\n")
 
-    save_failed_splits()
-
     add_button.config(state=tk.NORMAL)
     scan_button.config(state=tk.NORMAL)
     remove_button.config(state=tk.NORMAL)
     start_button.config(state=tk.NORMAL)
     abort_button.config(state=tk.DISABLED)
 
-def create_frame(parent):
+def create_frame(parent, dll_path):
     ensure_appdata_folder()
     load_config()
-    load_failed_splits()
+
+    global default_splitps3iso_path
+    default_splitps3iso_path = dll_path
 
     frame = ttk.Frame(parent)
     settings_frame = tk.Frame(frame)
     settings_frame.pack(pady=10)
 
-    #tk.Label(settings_frame, text="splitps3iso DLL:").grid(row=0, column=0, sticky="e")
-    #dll_entry = tk.Entry(settings_frame, width=60)
-    #dll_entry.grid(row=0, column=1, padx=5)
-    #dll_entry.insert(0, default_splitps3iso_path)
-    #dll_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(dll_entry))
-    #dll_browse.grid(row=0, column=2, padx=5)
+    tk.Label(settings_frame, text="Output Folder:").grid(row=0, column=0, sticky="e")
+    output_entry = tk.Entry(settings_frame, width=60)
+    output_entry.grid(row=0, column=1, padx=5)
+    output_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_output_folder(output_entry))
+    output_browse.grid(row=0, column=2, padx=5)
 
-    # Unattended checkbox
     unattended_var = tk.BooleanVar()
     unattended_checkbox = tk.Checkbutton(settings_frame, text="Unattended (-h)", variable=unattended_var)
     unattended_checkbox.grid(row=1, column=1, sticky="w", padx=5)
@@ -229,9 +223,9 @@ def create_frame(parent):
     iso_queue_listbox = tk.Listbox(queue_frame, width=100, height=10)
     iso_queue_listbox.grid(row=1, column=0, columnspan=5, padx=10, pady=5)
 
-    add_button = tk.Button(queue_frame, text="Add ISO", command=lambda: add_iso(iso_queue_listbox, failed_isos))
+    add_button = tk.Button(queue_frame, text="Add ISO", command=lambda: add_iso(iso_queue_listbox, None))
     add_button.grid(row=2, column=0, padx=5, pady=5)
-    scan_button = tk.Button(queue_frame, text="Scan Base Folder", command=lambda: scan_base_folder(iso_queue_listbox, failed_isos))
+    scan_button = tk.Button(queue_frame, text="Scan Base Folder", command=lambda: scan_base_folder(iso_queue_listbox, None))
     scan_button.grid(row=2, column=1, padx=5, pady=5)
     remove_button = tk.Button(queue_frame, text="Remove Selected", command=lambda: remove_selected(iso_queue_listbox))
     remove_button.grid(row=2, column=2, padx=5, pady=5)
@@ -247,9 +241,16 @@ def create_frame(parent):
 
     control_frame = tk.Frame(frame)
     control_frame.pack(pady=10)
-    start_button = tk.Button(control_frame, text="Start Splitting", command=lambda: start_split_thread(iso_queue_listbox, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var))
-    start_button.grid(row=0, column=0, padx=5)
     abort_button = tk.Button(control_frame, text="Abort", command=lambda: abort_split(status_var), state=tk.DISABLED)
+    start_button = tk.Button(
+        control_frame,
+        text="Start Splitting",
+        command=lambda: start_split_thread(
+            iso_queue_listbox, output_entry, log_text, status_var,
+            add_button, scan_button, remove_button, start_button, abort_button, unattended_var
+        )
+    )
+    start_button.grid(row=0, column=0, padx=5)
     abort_button.grid(row=0, column=1, padx=5)
     save_log_button = tk.Button(control_frame, text="Save Completed Log", command=lambda: save_completed_log(split_isos, log_text))
     save_log_button.grid(row=0, column=2, padx=5)

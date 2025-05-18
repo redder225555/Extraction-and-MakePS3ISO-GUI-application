@@ -217,10 +217,13 @@ def process_folders(folder_queue_listbox, output_entry, split_var, unattended_va
         create_batch_file(converted_folders, log_text)
         os.system(f'start cmd /k \"{batch_file_path}\"')
 
-def create_frame(parent):
+def create_frame(parent, dll_path):
     ensure_appdata_folder()
     load_config()
     load_failed_conversions()
+
+    global default_makeps3iso_path
+    default_makeps3iso_path = dll_path
 
     frame = ttk.Frame(parent)
     settings_frame = tk.Frame(frame)
