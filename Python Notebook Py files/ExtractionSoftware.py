@@ -9,7 +9,6 @@ import json
 from pathlib import Path
 from tkinter import ttk
 
-from pathlib import Path
 APPDATA_DIR = Path(os.getenv("LOCALAPPDATA")) / "PS3Utils"
 LOG_FILE = APPDATA_DIR / "ES__log.txt"
 CONFIG_FILE_JSON = APPDATA_DIR / "ES_config.json"
@@ -34,7 +33,6 @@ DEFAULT_LAYOUT = {
     "password_visibility_checkbox": {"x": 556, "y": 527, "width": 120, "height": 30},
     "replace_checkbox": {"x": 210, "y": 496, "width": 200, "height": 30},
     "delete_checkbox": {"x": -18, "y": 495, "width": 250, "height": 30},
-    "extract_here_checkbox": {"x": -16, "y": 522, "width": 150, "height": 30},
     "file_count_label": {"x": 98, "y": 442, "width": 200, "height": 30},
     "progress_bar": {"x": 298, "y": 446, "width": 300, "height": 20},
     "current_file_progress_bar": {"x": 298, "y": 477, "width": 300, "height": 20},
@@ -122,7 +120,6 @@ class DragManager:
             y = widget.winfo_y() + event.y - widget._drag_start_y
             widget.place(x=x, y=y)
             self._select(widget)
-            # If this is the folder queue, move the handle too
             if hasattr(widget, "_resize_handle"):
                 widget._resize_handle.place(x=x + widget.winfo_width() - 10, y=y + widget.winfo_height() - 10)
         except Exception:
@@ -162,9 +159,8 @@ class DragManager:
         y = widget.winfo_y()
         width = widget.winfo_width()
         height = widget.winfo_height()
-        move_delta = 2 if not event.state & 0x1 else 10  # Shift for bigger steps
+        move_delta = 2 if not event.state & 0x1 else 10
 
-        # Move with arrow keys
         if event.keysym == "Left":
             widget.place(x=x - move_delta, y=y)
         elif event.keysym == "Right":
@@ -173,8 +169,7 @@ class DragManager:
             widget.place(x=x, y=y - move_delta)
         elif event.keysym == "Down":
             widget.place(x=x, y=y + move_delta)
-        # Resize with Shift+Arrow
-        if event.state & 0x1:  # Shift pressed
+        if event.state & 0x1:
             if event.keysym == "Right":
                 widget.place(width=width + move_delta)
             elif event.keysym == "Left":
@@ -183,7 +178,6 @@ class DragManager:
                 widget.place(height=height + move_delta)
             elif event.keysym == "Up":
                 widget.place(height=max(10, height - move_delta))
-            # If this is the folder queue, move the handle too
             if hasattr(widget, "_resize_handle"):
                 info = widget.place_info()
                 widget._resize_handle.place(
@@ -221,7 +215,6 @@ class DragManager:
             if widget_id in layout:
                 info = layout[widget_id]
                 widget.place(x=info["x"], y=info["y"], width=info["width"], height=info["height"])
-                # If this is the folder queue, move the handle too
                 if hasattr(widget, "_resize_handle"):
                     widget._resize_handle.place(
                         x=info["x"] + info["width"] - 10,
@@ -237,7 +230,6 @@ def create_frame(parent):
     password_visibility_var = tk.BooleanVar()
     replace_checkbox_var = tk.BooleanVar()
     delete_checkbox_var = tk.BooleanVar()
-    extract_here_var = tk.BooleanVar(value=True)
     headless_winrar_var = tk.BooleanVar(value=True)
     progress_var = tk.IntVar()
     current_file_progress_var = tk.IntVar()
@@ -250,7 +242,6 @@ def create_frame(parent):
             "password": password_entry.get(),
             "replace_files": replace_checkbox_var.get(),
             "delete_after": delete_checkbox_var.get(),
-            "extract_here": extract_here_var.get(),
             "headless_winrar": headless_winrar_var.get()
         }
         with open(CONFIG_FILE_JSON, "w") as config_file:
@@ -267,7 +258,6 @@ def create_frame(parent):
             "password": "",
             "replace_files": False,
             "delete_after": False,
-            "extract_here": True,
             "headless_winrar": True
         }
 
@@ -339,7 +329,6 @@ def create_frame(parent):
         use_password   = password_checkbox_var.get()
         replace_files  = replace_checkbox_var.get()
         delete_after   = delete_checkbox_var.get()
-        extract_here   = extract_here_var.get()
         password       = password_entry.get()
 
         folders = folder_queue_listbox.get(0, tk.END)
@@ -377,12 +366,13 @@ def create_frame(parent):
                 return
 
             archive_path = os.path.join(folder, archive)
-            dest_folder = folder if extract_here else os.path.join(folder, os.path.splitext(archive)[0])
+            # Always extract to a subfolder named after the archive (without extension)
+            dest_folder = os.path.join(folder, os.path.splitext(archive)[0])
             if not os.path.exists(dest_folder):
                 os.makedirs(dest_folder, exist_ok=True)
 
             if extraction_tool == "7z":
-                cmd = f'"{exe_path}" e "{archive_path}" -o"{dest_folder}" -bsp1'
+                cmd = f'"{exe_path}" x "{archive_path}" -o"{dest_folder}" -bsp1'
                 if use_password:
                     cmd += f' -p"{password}"'
                 if replace_files:
@@ -447,7 +437,6 @@ def create_frame(parent):
     folder_queue_listbox.place(x=6, y=2, width=884, height=314)
     dragman.add_widget(folder_queue_listbox, "folder_queue_listbox")
 
-    # Add a resize handle (small label) at the bottom-right of the Listbox
     resize_handle = tk.Label(frame, cursor="bottom_right_corner", bg="#cccccc")
     def place_resize_handle():
         info = folder_queue_listbox.place_info()
@@ -473,11 +462,8 @@ def create_frame(parent):
 
     resize_handle.bind("<Button-1>", start_resize)
     resize_handle.bind("<B1-Motion>", do_resize)
-
-    # Attach handle to Listbox for DragManager to move it together
     folder_queue_listbox._resize_handle = resize_handle
 
-    # --- Rest of your widgets ---
     add_folder_btn = tk.Button(frame, text="Add Folder", command=select_folders)
     add_folder_btn.place(x=7, y=324, width=120, height=30)
     dragman.add_widget(add_folder_btn, "add_folder_btn")
@@ -534,11 +520,7 @@ def create_frame(parent):
     delete_checkbox = tk.Checkbutton(frame, text="Delete Archive After Extraction", variable=delete_checkbox_var, command=save_config)
     delete_checkbox.place(x=-18, y=495, width=250, height=30)
     dragman.add_widget(delete_checkbox, "delete_checkbox")
-    extract_here_checkbox = tk.Checkbutton(frame, text="Extract Here", variable=extract_here_var, command=save_config)
-    extract_here_checkbox.place(x=-16, y=522, width=150, height=30)
-    dragman.add_widget(extract_here_checkbox, "extract_here_checkbox")
 
-    # Headless WinRAR Extraction Checkbox
     headless_winrar_checkbox = tk.Checkbutton(
         frame, text="Headless WinRAR Extraction", variable=headless_winrar_var, command=save_config
     )
@@ -572,7 +554,6 @@ def create_frame(parent):
     password_entry.insert(0, config.get("password", ""))
     replace_checkbox_var.set(config.get("replace_files", False))
     delete_checkbox_var.set(config.get("delete_after", False))
-    extract_here_var.set(config.get("extract_here", True))
     headless_winrar_var.set(config.get("headless_winrar", True))
 
     dragman.load_layout()

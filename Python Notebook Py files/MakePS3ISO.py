@@ -5,38 +5,19 @@ import os
 import threading
 import ctypes
 
-# -------------------------
-# Global Variables and Configuration
-# -------------------------
 abort_flag = False
 current_proc = None
-converted_folders = []  # List to store successfully converted folders
-failed_folders = set()  # Set to store folders that failed conversion
+converted_folders = []
+failed_folders = set()
 
-# Paths for AppData storage
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "MPS3ISOconfig.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_conversions.json")
 log_file_path = os.path.join(appdata_folder, "converted_folders.log")
 batch_file_path = os.path.join(appdata_folder, "delete_folders.bat")
-
-# Default path values
-default_makeps3iso_path = ""
+DLLS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "PS3Utils", "DLLs")
+default_makeps3iso_path = os.path.join(DLLS_PATH, "makeps3isox64.dll")
 default_output_folder = ""
-
-def download_file(url, filename):
-        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/makeps3iso.dll"
-        filename = "makeps3iso.dll"
-    
-    # Create the downloads directory if it doesn't exist
-        os.makedirs(appdata_folder, exist_ok=True)
-    
-    # Join the directory and filename to create the full path
-        filepath = os.path.join(appdata_folder, filename)
-    
-    # Download the file
-        urllib.request.urlretrieve(url, filepath)
-        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
@@ -57,10 +38,9 @@ def load_config():
             default_makeps3iso_path = config.get("makeps3iso_path", "")
             default_output_folder = config.get("output_folder", "")
 
-def save_config(exe_entry, output_entry):
+def save_config(output_entry):
     import json
     config = {
-        "makeps3iso_path": exe_entry.get().strip(),
         "output_folder": output_entry.get().strip(),
     }
     with open(config_file_path, "w") as config_file:
@@ -88,24 +68,15 @@ def create_batch_file(converted_folders, log_text):
     with open(batch_file_path, "w") as batch_file:
         for folder in converted_folders:
             batch_file.write(f'rmdir /S /Q "{folder}"\n')
+        batch_file.write("pause\n")
     log_text.insert(tk.END, f"Batch file created at: {batch_file_path}\n")
 
-def select_exe(exe_entry, output_entry):
-    filename = filedialog.askopenfilename(
-        title="Select MakePS3ISO DLL",
-        filetypes=[("DLL Files", "*.dll")]
-    )
-    if filename:
-        exe_entry.delete(0, tk.END)
-        exe_entry.insert(0, filename)
-        save_config(exe_entry, output_entry)
-
-def select_output_folder(output_entry, exe_entry):
+def select_output_folder(output_entry):
     folder = filedialog.askdirectory(title="Select Output Folder")
     if folder:
         output_entry.delete(0, tk.END)
         output_entry.insert(0, folder)
-        save_config(exe_entry, output_entry)
+        save_config(output_entry)
 
 def add_folder(folder_queue_listbox, failed_folders):
     folder = filedialog.askdirectory(title="Select Folder for Conversion")
@@ -136,12 +107,12 @@ def remove_selected(folder_queue_listbox):
         for i in reversed(selection):
             folder_queue_listbox.delete(i)
 
-def run_conversion_external(folder, exe_entry, output_entry, split_var, unattended_var, log_text, status_var):
+def run_conversion_external(folder, output_entry, split_var, unattended_var, log_text, status_var):
     target_folder = folder
     status_var.set(f"Processing: {target_folder}")
     log_text.insert(tk.END, f"Processing folder: {target_folder}\n")
 
-    dll_path = exe_entry.get().strip()
+    dll_path = default_makeps3iso_path
     if not dll_path:
         log_text.insert(tk.END, "MakePS3ISO DLL path not set.\n")
         return False
@@ -150,8 +121,20 @@ def run_conversion_external(folder, exe_entry, output_entry, split_var, unattend
         log_text.insert(tk.END, "Output folder not set.\n")
         return False
 
+    dll_path = os.path.abspath(dll_path)
+    if not os.path.isfile(dll_path):
+        log_text.insert(tk.END, f"MakePS3ISO DLL not found at: {dll_path}\n")
+        return False
 
-        # Build argument list for DLL
+    try:
+        dll = ctypes.CDLL(dll_path)
+        try:
+            dll.makeps3iso_entry.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_char_p)]
+            dll.makeps3iso_entry.restype = ctypes.c_int
+        except AttributeError:
+            log_text.insert(tk.END, "DLL entry point 'makeps3iso_entry' not found.\n")
+            return False
+
         args = [b"makeps3iso2.dll"]
         if split_var.get():
             args.append(b"-s")
@@ -163,7 +146,7 @@ def run_conversion_external(folder, exe_entry, output_entry, split_var, unattend
         argv = (ctypes.c_char_p * (argc + 1))()
         for i, arg in enumerate(args):
             argv[i] = arg
-        argv[argc] = None  # Null-terminate for safety
+        argv[argc] = None
 
         result = dll.makeps3iso_entry(argc, argv)
         if result == 0:
@@ -172,9 +155,12 @@ def run_conversion_external(folder, exe_entry, output_entry, split_var, unattend
         else:
             log_text.insert(tk.END, f"Failed: {target_folder} (DLL returned {result})\n")
             return False
+    except Exception as e:
+        log_text.insert(tk.END, f"Exception: {e}\n")
+        return False
 
-def start_conversion_thread(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button):
-    threading.Thread(target=process_folders, args=(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button), daemon=True).start()
+def start_conversion_thread(folder_queue_listbox, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button):
+    threading.Thread(target=process_folders, args=(folder_queue_listbox, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button), daemon=True).start()
 
 def abort_conversion(status_var):
     global abort_flag
@@ -187,7 +173,7 @@ def execute_batch_file(log_text):
     else:
         log_text.insert(tk.END, "Batch file does not exist.\n")
 
-def process_folders(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button):
+def process_folders(folder_queue_listbox, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button):
     folders = folder_queue_listbox.get(0, tk.END)
     if not folders:
         log_text.insert(tk.END, "No folders in queue.\n")
@@ -207,7 +193,7 @@ def process_folders(folder_queue_listbox, exe_entry, output_entry, split_var, un
         if abort_flag:
             log_text.insert(tk.END, "Aborted by user.\n")
             break
-        success = run_conversion_external(folder, exe_entry, output_entry, split_var, unattended_var, log_text, status_var)
+        success = run_conversion_external(folder, output_entry, split_var, unattended_var, log_text, status_var)
         if success:
             converted_folders.append(folder)
         else:
@@ -227,28 +213,23 @@ def process_folders(folder_queue_listbox, exe_entry, output_entry, split_var, un
     start_button.config(state=tk.NORMAL)
     abort_button.config(state=tk.DISABLED)
 
+    if converted_folders:
+        create_batch_file(converted_folders, log_text)
+        os.system(f'start cmd /k \"{batch_file_path}\"')
+
 def create_frame(parent):
     ensure_appdata_folder()
     load_config()
     load_failed_conversions()
 
     frame = ttk.Frame(parent)
-    # Settings Frame
     settings_frame = tk.Frame(frame)
     settings_frame.pack(pady=10)
-
-    tk.Label(settings_frame, text="MakePS3ISO DLL:").grid(row=0, column=0, sticky="e")
-    exe_entry = tk.Entry(settings_frame, width=60)
-    exe_entry.grid(row=0, column=1, padx=5)
-    exe_entry.insert(0, default_makeps3iso_path)
-    exe_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(exe_entry, output_entry))
-    exe_browse.grid(row=0, column=2, padx=5)
 
     split_var = tk.BooleanVar(value=False)
     split_checkbox = tk.Checkbutton(settings_frame, text="Split ISO into 4GB parts", variable=split_var)
     split_checkbox.grid(row=2, column=1, sticky="w", padx=5)
 
-    # Unattended checkbox
     unattended_var = tk.BooleanVar()
     unattended_checkbox = tk.Checkbutton(settings_frame, text="Unattended (-h)", variable=unattended_var)
     unattended_checkbox.grid(row=3, column=1, sticky="w", padx=5)
@@ -257,10 +238,9 @@ def create_frame(parent):
     output_entry = tk.Entry(settings_frame, width=60)
     output_entry.grid(row=1, column=1, padx=5)
     output_entry.insert(0, default_output_folder)
-    output_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_output_folder(output_entry, exe_entry))
+    output_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_output_folder(output_entry))
     output_browse.grid(row=1, column=2, padx=5)
 
-    # Folder Queue Frame
     queue_frame = tk.Frame(frame)
     queue_frame.pack(pady=10)
 
@@ -275,21 +255,18 @@ def create_frame(parent):
     remove_button = tk.Button(queue_frame, text="Remove Selected", command=lambda: remove_selected(folder_queue_listbox))
     remove_button.grid(row=2, column=2, padx=5, pady=5)
 
-    # Log Frame
     log_frame = tk.Frame(frame)
     log_frame.pack(pady=10)
     log_text = tk.Text(log_frame, width=100, height=10)
     log_text.pack()
 
-    # Status
     status_var = tk.StringVar()
     status_label = tk.Label(frame, textvariable=status_var)
     status_label.pack()
 
-    # Control Buttons
     control_frame = tk.Frame(frame)
     control_frame.pack(pady=10)
-    start_button = tk.Button(control_frame, text="Start Conversion", command=lambda: start_conversion_thread(folder_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button))
+    start_button = tk.Button(control_frame, text="Start Conversion", command=lambda: start_conversion_thread(folder_queue_listbox, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button))
     start_button.grid(row=0, column=0, padx=5)
     abort_button = tk.Button(control_frame, text="Abort", command=lambda: abort_conversion(status_var), state=tk.DISABLED)
     abort_button.grid(row=0, column=1, padx=5)

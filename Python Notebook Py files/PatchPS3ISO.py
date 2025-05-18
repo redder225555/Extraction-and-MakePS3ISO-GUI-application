@@ -19,24 +19,10 @@ config_file_path = os.path.join(appdata_folder, "ISO-patched-config.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_to_Patch.json")
 log_file_path = os.path.join(appdata_folder, "patched_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Patched_ISO.bat")
-
+DLLS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "PS3Utils", "DLLs")
 # Default path values
-default_patchps3iso_path = ""
+default_patchps3iso_path = os.path.join(DLLS_PATH, "patchps3isox64.dll")
 default_version = ""
-
-def download_file(url, filename):
-        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/patchps3iso.dll"
-        filename = "patchps3iso.dll"
-    
-    # Create the downloads directory if it doesn't exist
-        os.makedirs(appdata_folder, exist_ok=True)
-    
-    # Join the directory and filename to create the full path
-        filepath = os.path.join(appdata_folder, filename)
-    
-    # Download the file
-        urllib.request.urlretrieve(url, filepath)
-        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
@@ -238,18 +224,18 @@ def create_frame(parent):
     settings_frame = tk.Frame(frame)
     settings_frame.pack(pady=10)
 
-    tk.Label(settings_frame, text="patchps3iso DLL:").grid(row=0, column=0, sticky="e")
-    dll_entry = tk.Entry(settings_frame, width=60)
-    dll_entry.grid(row=0, column=1, padx=5)
-    dll_entry.insert(0, default_patchps3iso_path)
-    dll_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(dll_entry, version_entry))
-    dll_browse.grid(row=0, column=2, padx=5)
+    #tk.Label(settings_frame, text="patchps3iso DLL:").grid(row=0, column=0, sticky="e")
+    #dll_entry = tk.Entry(settings_frame, width=60)
+    #dll_entry.grid(row=0, column=1, padx=5)
+    #dll_entry.insert(0, default_patchps3iso_path)
+    #dll_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(dll_entry, version_entry))
+    #dll_browse.grid(row=0, column=2, padx=5)
 
     tk.Label(settings_frame, text="Version:").grid(row=1, column=0, sticky="e")
     version_entry = tk.Entry(settings_frame, width=20)
     version_entry.grid(row=1, column=1, sticky="w", padx=5)
     version_entry.insert(0, default_version)
-    version_entry.bind("<FocusOut>", lambda e: set_version(version_entry, dll_entry))
+    version_entry.bind("<FocusOut>", lambda e: set_version(version_entry))
 
     # Unattended checkbox
     unattended_var = tk.BooleanVar()
@@ -285,7 +271,7 @@ def create_frame(parent):
     # Control Buttons
     control_frame = tk.Frame(frame)
     control_frame.pack(pady=10)
-    start_button = tk.Button(control_frame, text="Start Patching", command=lambda: start_patch_thread(iso_queue_listbox, dll_entry, version_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var))
+    start_button = tk.Button(control_frame, text="Start Patching", command=lambda: start_patch_thread(iso_queue_listbox, version_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var))
     start_button.grid(row=0, column=0, padx=5)
     abort_button = tk.Button(control_frame, text="Abort", command=lambda: abort_patch(status_var), state=tk.DISABLED)
     abort_button.grid(row=0, column=1, padx=5)

@@ -4,7 +4,6 @@ from tkinter import ttk
 import os
 import threading
 import ctypes
-import urllib.request
 
 # -------------------------
 # Global Variables and Configuration
@@ -14,31 +13,16 @@ current_proc = None
 extracted_isos = []  # List to store successfully extracted ISOs
 failed_isos = set()  # Set to store ISOs that failed extraction
 
-
 # Paths for AppData storage
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "ISO-E-config.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_Extractions.json")
 log_file_path = os.path.join(appdata_folder, "Extracted_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Extracted_ISO.bat")
-extractps3iso_dll_path = os.path.join(appdata_folder, dll_host_file)
+DLLS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "PS3Utils", "DLLs")
 # Default path values
-default_extractps3iso_path = ""
+default_extractps3iso_path = os.path.join(DLLS_PATH, "extractps3isox64.dll")
 default_output_folder = ""
-
-def download_file(url, filename):
-        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/extractps3iso.dll"
-        filename = "extractps3iso.dll"
-    
-    # Create the downloads directory if it doesn't exist
-        os.makedirs(appdata_folder, exist_ok=True)
-    
-    # Join the directory and filename to create the full path
-        filepath = os.path.join(appdata_folder, filename)
-    
-    # Download the file
-        urllib.request.urlretrieve(url, filepath)
-        print(f"Downloaded {url} to {filepath}")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
@@ -95,7 +79,7 @@ def create_batch_file(extracted_isos, log_text):
 def select_exe(exe_entry, output_entry):
     filename = filedialog.askopenfilename(
         title="Select extractps3iso DLL",
-        filetypes=[("DLL Files", "*.dll")]
+       filetypes=[("DLL Files", "*.dll")]
     )
     if filename:
         exe_entry.delete(0, tk.END)
@@ -241,12 +225,12 @@ def create_frame(parent):
     settings_frame = tk.Frame(frame)
     settings_frame.pack(pady=10)
 
-    tk.Label(settings_frame, text="extractps3iso DLL:").grid(row=0, column=0, sticky="e")
-    exe_entry = tk.Entry(settings_frame, width=60)
-    exe_entry.grid(row=0, column=1, padx=5)
-    exe_entry.insert(0, default_extractps3iso_path)
-    exe_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(exe_entry, output_entry))
-    exe_browse.grid(row=0, column=2, padx=5)
+    #tk.Label(settings_frame, text="extractps3iso DLL:").grid(row=0, column=0, sticky="e")
+    #exe_entry = tk.Entry(settings_frame, width=60)
+    #exe_entry.grid(row=0, column=1, padx=5)
+    #exe_entry.insert(0, default_extractps3iso_path)
+    #exe_browse = tk.Button(settings_frame, text="Browse", command=lambda:)
+    #exe_browse.grid(row=0, column=2, padx=5)
 
     split_var = tk.BooleanVar(value=False)
     split_checkbox = tk.Checkbutton(settings_frame, text="Split extracted files (-s)", variable=split_var)
@@ -261,7 +245,7 @@ def create_frame(parent):
     output_entry = tk.Entry(settings_frame, width=60)
     output_entry.grid(row=1, column=1, padx=5)
     output_entry.insert(0, default_output_folder)
-    output_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_output_folder(output_entry, exe_entry))
+    output_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_output_folder(output_entry))
     output_browse.grid(row=1, column=2, padx=5)
 
     # ISO Queue Frame
@@ -293,7 +277,7 @@ def create_frame(parent):
     # Control Buttons
     control_frame = tk.Frame(frame)
     control_frame.pack(pady=10)
-    start_button = tk.Button(control_frame, text="Start Extraction", command=lambda: start_extraction_thread(iso_queue_listbox, exe_entry, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button))
+    start_button = tk.Button(control_frame, text="Start Extraction", command=lambda: start_extraction_thread(iso_queue_listbox, output_entry, split_var, unattended_var, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button))
     start_button.grid(row=0, column=0, padx=5)
     abort_button = tk.Button(control_frame, text="Abort", command=lambda: abort_extraction(status_var), state=tk.DISABLED)
     abort_button.grid(row=0, column=1, padx=5)

@@ -10,28 +10,14 @@ current_proc = None
 split_isos = []
 failed_isos = set()
 
-
 appdata_folder = os.path.join(os.getenv("LOCALAPPDATA"), "PS3Utils")
 config_file_path = os.path.join(appdata_folder, "SplitISO_config.json")
 failed_conversions_file_path = os.path.join(appdata_folder, "failed_split.json")
 log_file_path = os.path.join(appdata_folder, "Split_ISOs.log")
 batch_file_path = os.path.join(appdata_folder, "delete_Main_ISO.bat")
+DLLS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "PS3Utils", "DLLs")
 
-default_splitps3iso_path = ""
-
-def download_file(url, filename):
-        url = "https://raw.githubusercontent.com/redder225555/Extraction-and-MakePS3ISO-GUI-application/blob/main/extractps3iso.dll"
-        filename = "splitps3iso.dll"
-    
-    # Create the downloads directory if it doesn't exist
-        os.makedirs(appdata_folder, exist_ok=True)
-    
-    # Join the directory and filename to create the full path
-        filepath = os.path.join(appdata_folder, filename)
-    
-    # Download the file
-        urllib.request.urlretrieve(url, filepath)
-        print(f"Downloaded {url} to {filepath}")
+default_splitps3iso_path = os.path.join(DLLS_PATH, "splitps3isox64.dll")
 
 def ensure_appdata_folder():
     if not os.path.exists(appdata_folder):
@@ -82,7 +68,7 @@ def create_batch_file(split_isos, log_text):
         for iso in split_isos:
             batch_file.write(f'del "{iso}"\n')
     log_text.insert(tk.END, f"Batch file created at: {batch_file_path}\n")
-
+    
 def select_exe(exe_entry):
     filename = filedialog.askopenfilename(
         title="Select splitps3iso DLL",
@@ -224,12 +210,12 @@ def create_frame(parent):
     settings_frame = tk.Frame(frame)
     settings_frame.pack(pady=10)
 
-    tk.Label(settings_frame, text="splitps3iso DLL:").grid(row=0, column=0, sticky="e")
-    dll_entry = tk.Entry(settings_frame, width=60)
-    dll_entry.grid(row=0, column=1, padx=5)
-    dll_entry.insert(0, default_splitps3iso_path)
-    dll_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(dll_entry))
-    dll_browse.grid(row=0, column=2, padx=5)
+    #tk.Label(settings_frame, text="splitps3iso DLL:").grid(row=0, column=0, sticky="e")
+    #dll_entry = tk.Entry(settings_frame, width=60)
+    #dll_entry.grid(row=0, column=1, padx=5)
+    #dll_entry.insert(0, default_splitps3iso_path)
+    #dll_browse = tk.Button(settings_frame, text="Browse", command=lambda: select_exe(dll_entry))
+    #dll_browse.grid(row=0, column=2, padx=5)
 
     # Unattended checkbox
     unattended_var = tk.BooleanVar()
@@ -261,7 +247,7 @@ def create_frame(parent):
 
     control_frame = tk.Frame(frame)
     control_frame.pack(pady=10)
-    start_button = tk.Button(control_frame, text="Start Splitting", command=lambda: start_split_thread(iso_queue_listbox, dll_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var))
+    start_button = tk.Button(control_frame, text="Start Splitting", command=lambda: start_split_thread(iso_queue_listbox, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var))
     start_button.grid(row=0, column=0, padx=5)
     abort_button = tk.Button(control_frame, text="Abort", command=lambda: abort_split(status_var), state=tk.DISABLED)
     abort_button.grid(row=0, column=1, padx=5)
