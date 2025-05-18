@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <time.h>
 #include <ctype.h>
+#include <stdint.h>
 
 int verbose = 1;
 
@@ -1237,7 +1238,7 @@ static int fill_entries(char *path1, char *path2, int level)
 
                 // align entry data with sector
 
-                int cldir = (((int) idrl) - ((int) idrl0)) & 2047;
+                int cldir = (((intptr_t) idrl) - ((intptr_t) idrl0)) & 2047;
                 
                 cldir += add;
 
@@ -1285,8 +1286,7 @@ static int fill_entries(char *path1, char *path2, int level)
 
                 // align entry data with sector
                 
-                int cwdir = (((int) idrw) - ((int) idrw0)) & 2047;
-
+                int cwdir = (((intptr_t) idrw) - ((intptr_t) idrw0)) & 2047;
                 cwdir += add;
 
                 if(cwdir > 2048) {
@@ -1366,7 +1366,7 @@ static int fill_entries(char *path1, char *path2, int level)
 
             // align entry data with sector
             
-            int cldir = (((int)idrl) - ((int) idrl0)) & 2047;
+            int cldir = (((intptr_t)idrl) - ((intptr_t) idrl0)) & 2047;
             
             cldir += add;
 
@@ -1412,7 +1412,7 @@ static int fill_entries(char *path1, char *path2, int level)
 
             // align entry data with sector
             
-            int cwdir = (((int) idrw) - ((int) idrw0)) & 2047;
+            int cwdir = (((intptr_t) idrw) - ((intptr_t) idrw0)) & 2047;
             
             cwdir += add;
 
