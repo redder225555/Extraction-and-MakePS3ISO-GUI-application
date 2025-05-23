@@ -1,0 +1,5 @@
+# Python requirements for Archive Batch Extractor & PS3 ISO Maker
+# Install with: pip install -r requirements.txt
+
+tkinter
+requests
