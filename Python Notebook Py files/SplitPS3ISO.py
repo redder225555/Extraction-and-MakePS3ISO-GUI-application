@@ -97,9 +97,27 @@ def remove_selected(iso_queue_listbox):
         for i in reversed(selection):
             iso_queue_listbox.delete(i)
 
-def run_split_external(iso_path, output_folder, log_text, status_var, unattended_var):
+class SplitProgress(ctypes.Structure):
+    _fields_ = [
+        ("processed_mb", ctypes.c_uint64),
+        ("total_mb", ctypes.c_uint64),
+        ("percent", ctypes.c_double),
+        ("eta_hours", ctypes.c_int),
+        ("eta_mins", ctypes.c_int),
+        ("eta_secs", ctypes.c_int),
+        ("part_number", ctypes.c_int),
+        ("part_filename", ctypes.c_char * 0x420),
+        ("current_speed", ctypes.c_double), # MB/s
+    ]
+
+def run_split_external(iso_path, output_folder, log_text, status_var, unattended_var, progress_bar=None, percent_label=None, eta_label=None, speed_label=None):
     status_var.set(f"Splitting: {iso_path}")
     log_text.insert(tk.END, f"Splitting ISO: {iso_path}\n")
+    
+    # Get ISO file size in MB
+    file_size_bytes = os.path.getsize(iso_path)
+    file_size_mb = file_size_bytes / (1024 * 1024)
+    log_text.insert(tk.END, f"Total size: {file_size_mb:.2f} MB\n")
 
     dll_path = default_splitps3iso_path
     if not dll_path:
@@ -108,33 +126,51 @@ def run_split_external(iso_path, output_folder, log_text, status_var, unattended
 
     try:
         dll = ctypes.CDLL(dll_path)
+        dll.get_split_progress.restype = ctypes.POINTER(SplitProgress)
+        # Always use -gdata for polling, and always put - options at the end
+        args = [dll_path.encode("utf-8"), iso_path.encode("utf-8")]
+        if output_folder.get().strip():
+            args.append(output_folder.get().strip().encode("utf-8"))
         if unattended_var.get():
-            if output_folder.get().strip():
-                argc = 4
-                argv = (ctypes.c_char_p * 5)()
-                argv[0] = dll_path.encode("utf-8")
-                argv[1] = iso_path.encode("utf-8")
-                argv[2] = output_folder.get().strip().encode("utf-8")
-                argv[3] = b"-h"
-            else:
-                argc = 3
-                argv = (ctypes.c_char_p * 4)()
-                argv[0] = dll_path.encode("utf-8")
-                argv[1] = iso_path.encode("utf-8")
-                argv[2] = b"-h"
-        else:
-            if output_folder.get().strip():
-                argc = 3
-                argv = (ctypes.c_char_p * 4)()
-                argv[0] = dll_path.encode("utf-8")
-                argv[1] = iso_path.encode("utf-8")
-                argv[2] = output_folder.get().strip().encode("utf-8")
-            else:
-                argc = 2
-                argv = (ctypes.c_char_p * 3)()
-                argv[0] = dll_path.encode("utf-8")
-                argv[1] = iso_path.encode("utf-8")
+            args.append(b"-h")
+        args.append(b"-gdata")
+        argc = len(args)
+        argv = (ctypes.c_char_p * (argc + 1))()
+        for i, arg in enumerate(args):
+            argv[i] = arg
+        progress_ptr = dll.get_split_progress()
+        def poll_progress():
+            while True:
+                progress = progress_ptr.contents
+                percent = progress.percent
+                processed_mb = progress.processed_mb
+                total_mb = progress.total_mb
+                eta = f"ETA: {progress.eta_hours:02}:{progress.eta_mins:02}:{progress.eta_secs:02}"
+                mbps = progress.current_speed
+                if progress_bar:
+                    progress_bar['value'] = percent
+                if percent_label:
+                    percent_label.config(text=f"{percent:.2f}% ({processed_mb}/{total_mb} MB)")
+                if eta_label:
+                    eta_label.config(text=eta)
+                if speed_label:
+                    speed_label.config(text=f"Speed: {mbps:.2f} MB/s")
+                if percent >= 100.0:
+                    break
+                progress_bar.update_idletasks()
+                percent_label.update_idletasks()
+                eta_label.update_idletasks()
+                speed_label.update_idletasks()
+                import time
+                time.sleep(0.2)
+        import threading
+        poll_thread = None
+        if progress_bar and percent_label and eta_label and speed_label:
+            poll_thread = threading.Thread(target=poll_progress, daemon=True)
+            poll_thread.start()
         result = dll.splitps3iso_entry(argc, argv)
+        if poll_thread:
+            poll_thread.join()
         if result == 0:
             log_text.insert(tk.END, f"Success: {iso_path}\n")
             return True
@@ -145,8 +181,8 @@ def run_split_external(iso_path, output_folder, log_text, status_var, unattended
         log_text.insert(tk.END, f"Exception: {e}\n")
         return False
 
-def start_split_thread(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
-    threading.Thread(target=process_isos, args=(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var), daemon=True).start()
+def start_split_thread(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var, progress_bar, percent_label, eta_label, speed_label):
+    threading.Thread(target=process_isos, args=(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var, progress_bar, percent_label, eta_label, speed_label), daemon=True).start()
 
 def abort_split(status_var):
     global abort_flag
@@ -159,7 +195,7 @@ def execute_batch_file(log_text):
     else:
         log_text.insert(tk.END, "Batch file does not exist.\n")
 
-def process_isos(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var):
+def process_isos(iso_queue_listbox, output_entry, log_text, status_var, add_button, scan_button, remove_button, start_button, abort_button, unattended_var, progress_bar, percent_label, eta_label, speed_label):
     isos = iso_queue_listbox.get(0, tk.END)
     if not isos:
         log_text.insert(tk.END, "No ISOs in queue.\n")
@@ -179,7 +215,7 @@ def process_isos(iso_queue_listbox, output_entry, log_text, status_var, add_butt
         if abort_flag:
             log_text.insert(tk.END, "Aborted by user.\n")
             break
-        success = run_split_external(iso, output_entry, log_text, status_var, unattended_var)
+        success = run_split_external(iso, output_entry, log_text, status_var, unattended_var, progress_bar, percent_label, eta_label, speed_label)
         if success:
             split_isos.append(iso)
 
@@ -235,6 +271,18 @@ def create_frame(parent, dll_path):
     log_text = tk.Text(log_frame, width=100, height=10)
     log_text.pack()
 
+    # Progress bar and labels
+    progress_frame = tk.Frame(frame)
+    progress_frame.pack(pady=10)
+    progress_bar = ttk.Progressbar(progress_frame, orient="horizontal", length=600, mode="determinate", maximum=100)
+    progress_bar.pack()
+    percent_label = tk.Label(progress_frame, text="0.00% (0/0 MB)")
+    percent_label.pack()
+    eta_label = tk.Label(progress_frame, text="ETA: 00:00:00")
+    eta_label.pack()
+    speed_label = tk.Label(progress_frame, text="Speed: 0.00 MB/s")
+    speed_label.pack()
+
     status_var = tk.StringVar()
     status_label = tk.Label(frame, textvariable=status_var)
     status_label.pack()
@@ -247,7 +295,8 @@ def create_frame(parent, dll_path):
         text="Start Splitting",
         command=lambda: start_split_thread(
             iso_queue_listbox, output_entry, log_text, status_var,
-            add_button, scan_button, remove_button, start_button, abort_button, unattended_var
+            add_button, scan_button, remove_button, start_button, abort_button, unattended_var,
+            progress_bar, percent_label, eta_label, speed_label
         )
     )
     start_button.grid(row=0, column=0, padx=5)

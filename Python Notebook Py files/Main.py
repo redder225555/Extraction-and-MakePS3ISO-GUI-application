@@ -168,6 +168,8 @@ try:
     import SplitPS3ISO
     import PatchPS3ISO
     import PKGFileMover
+
+    
     extraction_frame = ExtractionSoftware.create_frame(notebook)
     makeps3iso_frame = MakePS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["makeps3iso"]))
     ExtractPS3ISO_frame = ExtractPS3ISO.create_frame(notebook, os.path.join(DLLS_PATH, DLL_NAME_MAP["extractps3iso"]))
