@@ -4,9 +4,11 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <math.h>
 
 #define SPLIT_SIZE       0xFFFF0000
 #define BUFFER_SIZE      0x00010000
+#define MB_SIZE          (1024 * 1024)
 
 int verbose = 1;
 int unattended = 0;
@@ -58,6 +60,26 @@ static void fixpath(char *p)
 static FILE *fp_split = NULL;
 static int split_index = 0;
 
+// Progress struct for Python polling
+struct SplitProgress {
+    u64 processed_mb;
+    u64 total_mb;
+    double percent;
+    int eta_hours, eta_mins, eta_secs;
+    int part_number;
+    char part_filename[0x420];
+    double current_speed; // MB/s
+};
+static struct SplitProgress split_progress;
+static int use_gdata = 0;
+
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+struct SplitProgress* get_split_progress() {
+    return &split_progress;
+}
+
 static const char* get_basename(const char* path) {
     const char* base = strrchr(path, '/');
 #ifdef _WIN32
@@ -89,6 +111,8 @@ int splitps3iso_entry(int argc, const char* argv[])
     struct stat s;
     int n, len = 0;
     u32 count = 0;
+    int part_number = 1;
+    char part_filename[0x420];
 
     char path1[0x420];
     char output_folder[0x420] = {0};
@@ -100,9 +124,13 @@ int splitps3iso_entry(int argc, const char* argv[])
 
     clock_t t_start, t_finish;
 
+    // Parse -gdata flag
     for(int i = 1; i < argc; i++) {
         if(!strcmp(argv[i], "-h") || !strcmp(argv[i], "--headless")) {
             unattended = 1;
+        }
+        if(!strcmp(argv[i], "-gdata")) {
+            use_gdata = 1;
         }
     }
 
@@ -176,14 +204,25 @@ int splitps3iso_entry(int argc, const char* argv[])
 
     t_start = clock();
 
-    fp_split = fopen(split_file, "wb");
+    // Determine output file name
+    const char* iso_base = path1;
+    char output_path[0x420];
+    if (output_folder[0]) {
+        iso_base = get_basename(path1);
+        snprintf(output_path, sizeof(output_path), "%s/%s", output_folder, iso_base);
+    } else {
+        snprintf(output_path, sizeof(output_path), "%s", iso_base);
+    }
+
+    // Open first output file
+    snprintf(part_filename, sizeof(part_filename), "%s.%d", output_path, part_number-1);
+    fp_split = fopen(part_filename, "wb");
     if(!fp_split) {
         printf("Error!: Cannot open split file for writing\n\n");
         if(!unattended) { printf("Press ENTER key to exit\n"); get_input_char(); }
         fclose(fp);
         return -1;
     }
-
     buffer = malloc(BUFFER_SIZE);
     if (!buffer) {
         printf("Error!: Cannot allocate buffer\n\n");
@@ -193,37 +232,93 @@ int splitps3iso_entry(int argc, const char* argv[])
         return -1;
     }
 
-    const char* iso_base = path1;
-    if (output_folder[0]) {
-        iso_base = get_basename(path1);
-    }
-
-    if(verbose) printf("Splitting ISO: %s\n", path1);
-
+    // Get total file size for progress reporting
+    u64 total_size = (u64)s.st_size;
+    u64 total_size_mb = total_size / MB_SIZE;
+    u64 processed_bytes = 0;
+    snprintf(part_filename, sizeof(part_filename), "%s%d", output_path, part_number-1);
+    if(verbose && !use_gdata) printf("Splitting ISO: %s (Total size: %llu MB)\n", path1, total_size_mb);
+    clock_t progress_timer = clock();
+    clock_t last_update = clock();
+    double elapsed_seconds = 0;
+    double bytes_per_second = 0;
+    double eta_seconds = 0;
+    u64 part_size_mb = SPLIT_SIZE / MB_SIZE;
+    // Variables for current speed calculation
+    u64 last_processed_bytes = 0;
+    clock_t last_speed_time = t_start;
+    double current_speed = 0;
     do
     {
         len = fread(buffer, 1, BUFFER_SIZE, fp);
         fwrite(buffer, 1, len, fp_split);
         count += len;
-        if(verbose) printf("Wrote %u bytes to %s (part %d)\n", len, split_file, split_index);
-
-        if (count == SPLIT_SIZE)
-        {
-            count = 0;
+        processed_bytes += len;
+        // Update progress every 0.5 seconds
+        clock_t current_time = clock();
+        if ((current_time - last_update) > (CLOCKS_PER_SEC / 2)) {
+            // Calculate current speed (MB/s) based on bytes processed since last update
+            double interval = (double)(current_time - last_speed_time) / CLOCKS_PER_SEC;
+            if (interval > 0.01) {
+                current_speed = (double)(processed_bytes - last_processed_bytes) / interval;
+            }
+            last_processed_bytes = processed_bytes;
+            last_speed_time = current_time;
+            last_update = current_time;
+            // Calculate progress and ETA
+            elapsed_seconds = (double)(current_time - t_start) / CLOCKS_PER_SEC;
+            bytes_per_second = current_speed;
+            eta_seconds = (total_size - processed_bytes) / (bytes_per_second > 1 ? bytes_per_second : 1);
+            int eta_hours = (int)(eta_seconds / 3600);
+            int eta_mins = (int)((eta_seconds - (eta_hours * 3600)) / 60);
+            int eta_secs = (int)(eta_seconds - (eta_hours * 3600) - (eta_mins * 60));
+            u32 current_mb = count / MB_SIZE;
+            u64 total_processed_mb = processed_bytes / MB_SIZE;
+            double percent_complete = (double)processed_bytes * 100.0 / (double)total_size;
+            snprintf(part_filename, sizeof(part_filename), "%s.%d", output_path, part_number-1);
+            if(use_gdata) {
+                split_progress.processed_mb = total_processed_mb;
+                split_progress.total_mb = total_size_mb;
+                split_progress.percent = percent_complete;
+                split_progress.eta_hours = eta_hours;
+                split_progress.eta_mins = eta_mins;
+                split_progress.eta_secs = eta_secs;
+                split_progress.part_number = part_number;
+                strncpy(split_progress.part_filename, part_filename, sizeof(split_progress.part_filename)-1);
+                split_progress.part_filename[sizeof(split_progress.part_filename)-1] = 0;
+                split_progress.current_speed = current_speed / MB_SIZE; // Set current speed in MB/s
+                // Optionally add current_speed to struct if needed
+            } else if(verbose) {
+                printf("\rSplitting Part %d (%s): %llu/%llu MB (%.2f%%) at %.2f MB/s - ETA: %02d:%02d:%02d", 
+                   part_number, part_filename, total_processed_mb, total_size_mb, percent_complete,
+                   current_speed / MB_SIZE, eta_hours, eta_mins, eta_secs);
+                fflush(stdout);
+            }
+        }
+        if (count >= SPLIT_SIZE) {
+            if (verbose && !use_gdata) printf("\nCompleted part %d (%u MB)\n", part_number, count / MB_SIZE);
             fclose(fp_split);
-            build_split_file(split_file, sizeof(split_file), output_folder, iso_base, split_index++);
-            fp_split = fopen(split_file, "wb");
+            part_number++;
+            count = 0;
+            snprintf(part_filename, sizeof(part_filename), "%s.%d", output_path, part_number-1);
+            fp_split = fopen(part_filename, "wb");
             if(!fp_split) {
-                printf("Error!: Cannot open split file for writing\n\n");
+                printf("\nError!: Cannot open split file for writing\n\n");
                 free(buffer);
                 fclose(fp);
                 if(!unattended) { printf("Press ENTER key to exit\n"); get_input_char(); }
                 return -1;
             }
-            if(verbose) printf("Writing to: %s\n", split_file);
+            if(verbose && !use_gdata) printf("Writing to: %s\n", part_filename);
         }
     }
     while(len == BUFFER_SIZE);
+    
+    // Print final progress
+    if (verbose) {
+        u64 final_mb = processed_bytes / MB_SIZE;
+        printf("\nCompleted all parts: %llu MB total\n", final_mb);
+    }
 
     free(buffer);
 
