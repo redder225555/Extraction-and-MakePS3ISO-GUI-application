@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Ps3IsoTool</RootNamespace>
+    <AssemblyName>Ps3IsoTool</AssemblyName>
+    <Version>0.1.0</Version>
+    <!-- Self-contained single-file publish: see README.md for the dotnet publish command. -->
+  </PropertyGroup>
+
+</Project>

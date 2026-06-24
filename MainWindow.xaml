@@ -1,0 +1,179 @@
+<Window x:Class="Ps3IsoTool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PS3 ISO Tool" Height="600" Width="860"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Bg}">
+
+    <Window.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="Warn" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="StatusText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Good}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsError}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="Detail" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+
+        <!-- Shared Run/Cancel + progress footer (DataContext = the operation VM) -->
+        <DataTemplate x:Key="OpFooter">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,16,0,14">
+                    <Button Content="Run" Style="{StaticResource Primary}" Command="{Binding StartCommand}"/>
+                    <Button Content="Cancel" Margin="10,0,0,0" Command="{Binding CancelCommand}"/>
+                </StackPanel>
+                <ProgressBar Value="{Binding Percent}" Maximum="100"/>
+                <TextBlock Text="{Binding Status}" Style="{StaticResource StatusText}" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding Detail}" Style="{StaticResource Detail}"/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" Padding="18,12"
+                BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock Text="PS3 ISO Tool" FontSize="17" FontWeight="Bold"/>
+                <TextBlock Text="Extract · rebuild · split · merge · patch — native, no external tools" Style="{StaticResource Hint}"/>
+            </StackPanel>
+        </Border>
+
+        <TabControl Margin="14,12,14,14" Padding="0,12,0,0">
+
+            <!-- ── EXTRACT ───────────────────────────────────────────── -->
+            <TabItem Header="Extract" DataContext="{Binding Extract}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Extract the files out of a PS3 ISO (or a split .iso.0 set) into a folder."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="ISO file" Style="{StaticResource FieldLabel}"/>
+                            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding IsoPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="0" Grid.Column="2" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseIsoCommand}"/>
+                            <TextBlock Grid.Row="1" Text="Output folder" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="1" Grid.Column="2" Content="Browse…" Margin="8,10,0,0" Command="{Binding BrowseOutCommand}"/>
+                        </Grid>
+                        <CheckBox Margin="0,14,0,0" IsChecked="{Binding SplitBigFiles}" Content="Split files &gt;4 GB into .666xx parts (for FAT32 destinations)"/>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ── MAKE ──────────────────────────────────────────────── -->
+            <TabItem Header="Make ISO" DataContext="{Binding Make}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Rebuild a PS3 ISO from a game folder (must contain PS3_GAME/PARAM.SFO). Regenerates the filesystem from scratch — this is the extract→rebuild repair."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Game folder" Style="{StaticResource FieldLabel}"/>
+                            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding GameFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="0" Grid.Column="2" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseFolderCommand}"/>
+                            <TextBlock Grid.Row="1" Text="Save ISO as" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding OutputIso, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="1" Grid.Column="2" Content="Browse…" Margin="8,10,0,0" Command="{Binding BrowseOutCommand}"/>
+                        </Grid>
+                        <CheckBox Margin="0,14,0,0" IsChecked="{Binding Split}" Content="Split output into ~4 GB parts (.0/.1/…)"/>
+                        <CheckBox Margin="0,10,0,0" IsChecked="{Binding DeleteSource}" Content="Delete the source game folder after a successful build"/>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ── SPLIT ─────────────────────────────────────────────── -->
+            <TabItem Header="Split" DataContext="{Binding Split}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Split a PS3 .iso into FAT32-safe ~4 GB parts named game.iso.0, game.iso.1, …"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="ISO file" Style="{StaticResource FieldLabel}"/>
+                            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding IsoPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="0" Grid.Column="2" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseIsoCommand}"/>
+                            <TextBlock Grid.Row="1" Text="Output folder" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="1" Grid.Column="2" Content="Browse…" Margin="8,10,0,0" Command="{Binding BrowseOutCommand}"/>
+                        </Grid>
+                        <CheckBox Margin="0,14,0,0" IsChecked="{Binding DeleteSource}" Content="Delete the source ISO after a successful split"/>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ── MERGE ─────────────────────────────────────────────── -->
+            <TabItem Header="Merge" DataContext="{Binding Merge}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Recombine split parts (game.iso.0 + .1 + …) into a single .iso. Pick the .0 part; the rest are found automatically."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="First part (.0)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding FirstPart, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="0" Grid.Column="2" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowsePartCommand}"/>
+                            <TextBlock Grid.Row="1" Text="Save ISO as" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding OutputIso, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="1" Grid.Column="2" Content="Browse…" Margin="8,10,0,0" Command="{Binding BrowseOutCommand}"/>
+                        </Grid>
+                        <CheckBox Margin="0,14,0,0" IsChecked="{Binding DeleteSource}" Content="Delete the source parts after a successful merge"/>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ── PATCH ─────────────────────────────────────────────── -->
+            <TabItem Header="Patch" DataContext="{Binding Patch}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
+                                   Text="Lower the required firmware so a game runs on your CFW: patches PS3_SYSTEM_VER in PARAM.SFO and the version field in EBOOT.BIN / .SELF / .SPRX."/>
+                        <TextBlock Style="{StaticResource Warn}" Margin="0,0,0,14" Text="⚠ Edits the ISO in place — back it up first."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="ISO file" Style="{StaticResource FieldLabel}"/>
+                            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding IsoPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button    Grid.Row="0" Grid.Column="2" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseIsoCommand}"/>
+                            <TextBlock Grid.Row="1" Text="CFW version" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" HorizontalAlignment="Left" Width="100"
+                                       Text="{Binding CfwVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+        </TabControl>
+    </DockPanel>
+</Window>
