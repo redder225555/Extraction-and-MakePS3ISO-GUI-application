@@ -45,7 +45,7 @@
                     <Button Content="Run" Style="{StaticResource Primary}" Command="{Binding StartCommand}"/>
                     <Button Content="Cancel" Margin="10,0,0,0" Command="{Binding CancelCommand}"/>
                 </StackPanel>
-                <ProgressBar Value="{Binding Percent}" Maximum="100"/>
+                <ProgressBar Value="{Binding Percent, Mode=OneWay}" Maximum="100"/>
                 <TextBlock Text="{Binding Status}" Style="{StaticResource StatusText}" Margin="0,10,0,0"/>
                 <TextBlock Text="{Binding Detail}" Style="{StaticResource Detail}"/>
             </StackPanel>
@@ -171,6 +171,76 @@
                         </Grid>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OpFooter}"/>
                     </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ── BATCH ─────────────────────────────────────────────── -->
+            <TabItem Header="Batch" DataContext="{Binding Batch}">
+                <Border Background="{StaticResource Panel}" CornerRadius="8" Padding="20" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                   Text="Queue many operations and run them one at a time. Each &quot;Add&quot; button multi-selects inputs; outputs are auto-named (Make → folder.iso, Extract/Split → alongside the source, Patch → in place)."/>
+
+                        <!-- Add buttons -->
+                        <WrapPanel Grid.Row="1" Margin="0,0,0,12">
+                            <Button Content="＋ Extract" Command="{Binding AddExtractCommand}" Margin="0,0,8,8"/>
+                            <Button Content="＋ Make" Command="{Binding AddMakeCommand}" Margin="0,0,8,8"/>
+                            <Button Content="＋ Split" Command="{Binding AddSplitCommand}" Margin="0,0,8,8"/>
+                            <Button Content="＋ Merge" Command="{Binding AddMergeCommand}" Margin="0,0,8,8"/>
+                            <Button Content="＋ Patch" Command="{Binding AddPatchCommand}" Margin="0,0,16,8"/>
+                            <TextBlock Text="Patch CFW:" Style="{StaticResource FieldLabel}" Margin="0,0,6,8"/>
+                            <TextBox Width="70" Margin="0,0,16,8" Text="{Binding CfwVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Content="🗑 Clear" Command="{Binding ClearCommand}" Margin="0,0,0,8"/>
+                        </WrapPanel>
+
+                        <!-- Job list -->
+                        <Border Grid.Row="2" Background="{StaticResource Bg}" CornerRadius="6" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="6">
+                                <ItemsControl ItemsSource="{Binding Jobs}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{StaticResource Panel}" CornerRadius="5" Padding="10,7" Margin="0,3"
+                                                    BorderBrush="{StaticResource Border}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="62"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="150"/>
+                                                        <ColumnDefinition Width="110"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding OpLabel}" Foreground="{StaticResource Accent}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding InputName}" Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="{Binding Input}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{StaticResource Muted}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Status}"/>
+                                                    <ProgressBar Grid.Column="3" Height="8" Value="{Binding Percent, Mode=OneWay}" Maximum="100" VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="4" Content="✕" Margin="8,0,0,0" Padding="8,2" FontSize="11"
+                                                            Command="{Binding DataContext.RemoveJobCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Run controls + overall progress -->
+                        <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Content="Run All" Style="{StaticResource Primary}" Command="{Binding RunAllCommand}"/>
+                                <Button Content="Cancel" Margin="10,0,0,0" Command="{Binding CancelCommand}"/>
+                            </StackPanel>
+                            <ProgressBar Value="{Binding OverallPercent, Mode=OneWay}" Maximum="100"/>
+                            <TextBlock Text="{Binding OverallStatus}" Foreground="{StaticResource Muted}" FontSize="12.5" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </TabItem>
 
